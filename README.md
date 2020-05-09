@@ -4,6 +4,7 @@
 
 ### The Code
 All the code required to generate the images can be found in main.py
+
 ***NOTE***: there are dependencies to the root directory structure that must be met in order to run the code successfully.
 
 ### How to run the code
