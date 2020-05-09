@@ -1,7 +1,5 @@
 ## Neural Style Transfer
 
-### Adel Setoodehnia
-
 ### The Code
 All the code required to generate the images can be found in main.py
 
