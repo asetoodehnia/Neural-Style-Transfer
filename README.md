@@ -1,6 +1,6 @@
-## CS194-26 Final Project: Style Transfer
+## Neural Style Transfer
 
-### Adel Setoodehnia and Matthew Owen
+### Adel Setoodehnia
 
 ### The Code
 All the code required to generate the images can be found in main.py
