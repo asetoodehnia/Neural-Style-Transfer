@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>CS194-26 Final Project</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+    <!-- <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script> -->
+    <script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+
+    <style>
+        div {
+            padding-bottom: 8px;
+        }
+        code {
+            padding: 2px 4px;
+            font-size: 90%;
+            color: #c7254e;
+            /* background-color: #f9f2f4; */
+            border-radius: 4px;
+        }
+        .caption {
+            text-align: center;
+        }
+        blockquote {
+            margin: 0;
+        }
+
+        blockquote p {
+            padding: 15px;
+            background: #eee;
+            border-radius: 5px;
+        }
+
+        blockquote p::before {
+            content: '\201C';
+        }
+
+        blockquote p::after {
+            content: '\201D';
+        }
+    </style>
+
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#"><code>CS194-26 Final Project</code></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive"
+                aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarResponsive">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#Style">Style Transfer</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#Seam">Seam Carving</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#Light">Light Fields</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <p></p>
+                <h2>By: Adel Setoodehnia and Matthew Owen</h2>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row" id=Style>
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h3>Neural Style Transfer</h3>
+                <h4>Introduction</h4>
+                <p>
+                    Here's a quote from the abstract of the paper <a href="https://arxiv.org/pdf/1508.06576.pdf">A Neural Algorithm of Artistic Style</a> by Gatys et al.
+                    <blockquote cite="https://arxiv.org/pdf/1508.06576.pdf">
+                        <p>In fine art, especially painting, humans have mastered the skill to create unique
+                        visual experiences through composing a complex interplay between the content and style of an image.</p>
+                    </blockquote>
+                    The idea presented by the above paper, is an artificial system based on a <b>Deep Neural Network</b> that does just that.  It separates and then recombines the content and style of two arbitrary images, creating a whole brand new work of art!
+                </p>
+                <h4>Algorithm</h4>
+                <p>
+                    The main idea of the algorithm is actually quite simple!  Let's image that we have two different baselines: a content representation of our goal, and a style representation of our goal.  Given these two, our algorithm just continues to alter the pixel values of our image while minimizing the loss according to the baseline content representation and the loss according to the basline style representation.  In order to actually accomplish this, we need to find a way to get a baseline first!
+                </p>
+                <h5>Content and Style Representations</h5>
+                <p>
+                    Here we utilize the idea that when Convolutional Neural Networks are trained on object recognition, they develop a very good representation of the image.  By leveraging a CNN that has been trained on a large image set, we can feed in a content and style image and extract features along the way that give us the content and style representations we are looking for!
+                </p>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-8">
+                <img src="img/fig1.png" class="mx-auto d-block" style="width:100%">
+                <div class="font-italic">
+                    <p style="font-size:10px">
+                        Higher layers in the network capture the high-level <b>content</b> in terms of objects and their
+                        arrangement in the input image but do not constrain the exact pixel values of the reconstruction. We therefore
+                        refer to the feature responses in higher layers of the network as the <b>content
+                            representation</b>. To obtain a representation of the <b>style</b> of an input image, we use a feature space
+                        that consists of the <b>correlations</b> between the different filter responses over the spatial extent of the
+                        feature maps. By including the feature correlations of <b>multiple layers</b>, we obtain a stationary,
+                        multi-scale representation of the input image, which captures its texture information but not the global
+                        arrangement. We refer to this multi-scale
+                        representation as <b>style representation</b>.
+                    </p>
+                </div>
+            </div>
+            <div class="col-sm-2"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h5>Model Architecture</h5>
+                <p>
+                    As suggested in the paper, we use a pretrained <a href="https://pytorch.org/hub/pytorch_vision_vgg/">VGG-19 network</a> with average pooling instead of max pooling and without any of the fully connected layers for the CNN referred to above.  The architecure can be seen below.
+                </p>
+                <img src="img/vgg19.png" class="mx-auto d-block" style="width:70%">
+                <p></p>
+                <h5>Loss Functions</h5>
+                <p>
+                    Now we are in dire need of a way to quantify the losses we mentioned earlier.  As definied in the paper, we have the following equation for <b>content loss</b>:
+                    $$\mathcal{L}_{content}(\vec{p}, \vec{x}, l) = \frac{1}{2} \sum_{i, j}(F^{l}_{ij} - P^{l}_{ij})^{2}$$
+                    where we let \(\vec{p}\) and \(\vec{x}\) be the original image and the image that is being generated and \(P^{l}\) and \(F^{l}\) be their feature representations extracted from layer \(l\) from the model.  Now, for <b>style loss</b>, we have a few more moving parts.  First we need the measure of the correlations between the different filter responses which is given by the Gram matrix \(G^l\in\mathbb{R}^{N_l\times N_l}\) such that
+                    $$G_{ij}^{l} = \sum_{k}F_{ik}^{l} F_{jk}^l.$$
+                    Now we let \(\vec{a}\) and \(\vec{x}\) be the original image and the image that is being generated and \(A^{l}\) and \(G^{l}\) be
+                    their style representations extracted from layer \(l\) from the model.  We now have the following:
+                    $$E_{l} = \frac{1}{4 N_{l}^2 M_{l}^2} \sum_{ij}(G_{ij}^{l} - A_{ij}^l)^{2}$$
+                    $$\mathcal{L}_{style}(\vec{a}, \vec{x}) = \sum_{l=0}^{L} w_{l} E_{l}.$$
+                    Given these equations, we then define a <b>total loss function</b>,
+                    $$\mathcal{L}_{total}(\vec{p}, \vec{a}, \vec{x}) = \alpha \mathcal{L}_{content}(\vec{p}, \vec{x}) +
+                    \beta\mathcal{L}_{style}(\vec{a}, \vec{x})$$
+                    where \(\alpha\) and \(\beta\) are the weighting factors for content and style reconstruction respectively. We matched the content representation on layer <code>conv4_1</code>, and the
+                    style representations on layers <code>conv1_1</code>, <code>conv2_1</code>, <code>conv3_1</code>, <code>conv4_1</code>, and <code>conv5_1</code> (\(w_l =
+                    1/5\) in those layers, \(w_l = 0\) in all other layers) .
+                </p>
+                <h5>Training</h5>
+                <p>
+                    Now we can just use gradient descent to minimize the above loss function and find the optimal pixel values for our generated image.  We used the L-BFGS algorithm for our optimizer and trained for \(500\) epochs.  We left the \(\alpha=1\) and changed \(\beta\) accordingly to gain more or less of weight on the style loss.
+                </p>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h4>Results</h4>
+                <h5 class=text-center>Neckarfront</h5>
+                <img src="img/neckarfront.jpg" class="mx-auto d-block" style="width:50%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="styles/starry_night.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-5 my-auto">
+                <img src="results/neckarfront_starry_night.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="styles/picasso.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-5 my-auto">
+                <img src="results/neckarfront_picasso.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="styles/composition_vii.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-5 my-auto">
+                <img src="results/neckarfront_composition_vii.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h5 class=text-center>Yosemite</h5>
+                <img src="img/yosemite.jpg" class="mx-auto d-block" style="width:50%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="styles/starry_night.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-5 my-auto">
+                <img src="results/yosemite_starry_night.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="styles/cliff.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-5 my-auto">
+                <img src="results/yosemite_cliff.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h5 class=text-center>Avenue of the Giants</h5>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-4 my-auto">
+                <img src="img/redwoods.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-2 my-auto">
+                <img src="styles/forest.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-4 my-auto">
+                <img src="results/redwoods_forest.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h5 class=text-center>Campanile</h5>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-3 my-auto">
+                <img src="img/campanile.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-4 my-auto">
+                <img src="styles/starry_night.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-3 my-auto">
+                <img src="results/campanile_starry_night.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h5 class=text-center>Failure</h5>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-4 my-auto">
+                <img src="img/waterfall.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-2 my-auto">
+                <img src="styles/wave.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-4 my-auto">
+                <img src="results/waterfall_wave.jpg" class="mx-auto d-block" style="width:100%">
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <p>
+                    I suspect this case fails because there aren't very many distinguishable features in the image like nice strong edges, and thus the entire background of the mountainside becomes one incomprehensible wave of white, and the trees are the only things that end up looking like waves.
+                </p>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+
+
+        <div class="row" id=Seam>
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h3>Seam Carving</h3>
+                <h4>Introduction</h4>
+                <p>
+                    This project was a fun blast to the past when we was in CS 61B and we did the seam carving homework. For this project, we reimplemented all of the code from scratch in python. Our implementation was still inspired by the <a href="https://sp18.datastructur.es/materials/hw/hw5/hw5">spec from CS61B</a>.
+                </p>
+                <h4>Algorithm</h4>
+                <h5>Energy</h5>
+                <p>
+                    For the computation of the energy, we used the dual gradient energy function as suggested in the CS 61B assignment. This
+                    computes the <b>energy</b> of a given pixel as:
+                    $$E(x, y) = \Delta_x^2(x, y) + \Delta_y^2(x, y)$$
+                    where \(\Delta_x^2(x, y)\) and \(\Delta_x^2(x, y)\) are defined as:
+                    $$\Delta_x^2(x, y) = (R[x+1][y] - R[x-1][y])^2 + (G[x+1][y] - G[x-1][y])^2 + (B[x+1][y] - B[x-1][y])^2$$
+                    $$\Delta_y^2(x, y) = (R[x][y+1] - R[x][y-1])^2 + (G[x][y+1] - G[x][y-1])^2 + (B[x][y+1] - B[x][y-1])^2$$
+                    and \(R\), \(G\) and \(B\) are the <font color="#FE3562">red</font>, <font color="#03B600">green</font>, and <font color=#007bff>blue</font> channels respectively. This energy function is fairly simple to
+                    compute using numpy functions and also performs quite well. Below you can see some examples of what this image looks
+                    like for various images.
+                </p>
+                <h5>Seam</h5>
+                <p>
+                    A <b>seam</b> is any contiguous vertical or horizontal set of pixels through an image. A given seam can only differ by -1,
+                    0, or 1 pixels from one row / column to the next if you are identifying either horizontal or vertical seams. Simply
+                    put when we are trying to do seam carving we would like to remove the lowest energy seams as specified below. If we
+                    say that the cost of the minimum energy path that ends at \((i,j)\) is \(M(i,j)\) and the energy cost (as specified
+                    by our energy function above) at a pixel location \((i,j)\) is \(e(i,j)\) then we can define \(M(i,j)\) as follows.
+                    $$M(i, j) = e(i, j) + min(M(i - 1, j - 1), M(i, j - 1), M(i + 1, j - 1))$$
+                    We want to remove the seam whose value is the smallest in the last row / column of the image. Our problem here is
+                    defined for the vertical seam case and we will handle the horizontal seam case by first transposing the image and
+                    then using the same code.
+                </p>
+                <p>
+                    The <b>final step</b> in our algorithm will be to actually remove the seam from the image. We will then be able to
+                    repeatedly apply our seam removal algorithm to resize images in a content aware fashion. In order to do this we can
+                    use the power of numpy's magic indexing! Now we can see some results.
+                </p>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h4>Results</h4>
+                <h5>Working Examples</h5>
+                <p>
+                    The examples that we found worked best were examples that seemed to be more textural and had fewer well defined
+                    shapes crossing the entire images. Those images would take on noticeable artifacts when parts of them were removed.
+                    Another type of image that worked pretty well were images which had a lot of dead low energy space. When these
+                    images were seam carved, those regions were mostly removed while the rest of the image remained intact. This overall
+                    changed the look of the image unlike the patterned / textured images but the results were still passable.
+                </p>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Sunset 1</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-5">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/sunset0.JPG?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/sunset0.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/sunset0-300w.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">300 Width Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Sunset 2</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/sunset1.JPG?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/sunset1.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/sunset1-300h.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">300 Height Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Concert</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/concert.JPG?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/concert.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/concert-200h.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">200 Height Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Crater Lake</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/clake.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/clake.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/clake-200w.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">200 Width Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">City</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/city.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/city.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/city-100h.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">100 Height Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Oregon</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/oregon.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/oregon.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/oregon-200h.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">200 Width Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Ice</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/ice.JPG?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/ice.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/ice-100w.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">100 Width Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h5>Failures</h5>
+                <p>
+                    Opposite to the working examples, those that failed often had large defining shapes that went through the entire
+                    shape or had lots of straight lines. When you remove some seams out of either of these you end up with shapes that
+                    no longer are regular and often have very jagged edges. Also faces do not always fair well in seam carving if you
+                    are forced to remove seams that go through faces. As with the shapes, this leads to disproportionate facial features
+                    and other irregularities. See some of the below examples which highlight when seam carving alone might not be the
+                    best choice.
+                </p>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Chicken</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/chicken.JPG?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/chicken.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/chicken-250h.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">250 Height Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Kimono</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/kimono.JPG?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/kimono.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/kimono-200w.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">200 Width Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Brooklyn</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/brooklyn.JPG?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/brooklyn.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/brooklyn-300w.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">300 Width Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Oregon</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/data/oregon.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Original</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/oregon.png?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Energy</div>
+            </div>
+            <div class="col-5 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/carved/oregon-200w.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">200 Width Removed</div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+
+        <div class="row" id=Light>
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <h3>Light Fields</h3>
+                <h4>Introduction</h4>
+                <p>
+                    As <a href="http://graphics.stanford.edu/papers/lfcamera/lfcamera-150dpi.pdf">this paper</a> by Ng et al. (Ren Ng is the founder of the Lytro camera and a Professor at Berkeley!) demonstrated, capturing multiple images over a plane orthogonal to the optical axis enables achieving complex effects (see this
+                    gallery - hover around different part of images) using very simple operations like shifting and averaging. The goal of
+                    this project is to reproduce some of these effects using real lightfield data.
+                </p>
+                <h4>Algorithm</h4>
+                <p>
+                    Light field imaging is a relatively more simple process than what we needed to do for seam carving. The setup for
+                    this is that instead of taking a single exposure of a scene from a fixed point, we should instead take several
+                    photographs of a scene from differing positions (typically done in a grid pattern). The additional exposures of the
+                    scene give us more information which in turn allows us to create fun effects like refocusing of the image at
+                    different points as well as effects on the aperature.
+                </p>
+                <h5>Data</h5>
+                <p>
+                    The datasets that we used were from the <a href="http://lightfield.stanford.edu/lfs.html">Stanford Light Field
+                        Archive</a> and are composed of 289 images for each scene. The images comprise a \(17\times17\) grid of images
+                    translated into different postions. If we simply average all of these images the result is that the features that
+                    are further from the camera and move less from shot to shot remain focused while those that are in the foreground of
+                    the image and move relatively more become quite blurry.
+                </p>
+                <p>
+                    We can go even further than this, by chosing to shift the images differing amounts before averaging them together.
+                    For our code we would shift the image by some constant multple \(c\) times the appropriate offset. The appropriate
+                    offset essentially just means that we should shift images proportional to that of the offset from the center of the
+                    grid. The center of our grid would be the image at position \((8,8)\) in the grid so we would first calculate the
+                    offset from this center image and then shift it by \(c\) times the appropriate offset in each axis.
+                </p>
+                <h5>Implementation</h5>
+                <p>
+                    In order to implement this code, we started off by trying to use <code>scipy.ndimage.shift</code>, but we found that
+                    this resulted in code which was still quite slow. Instead of relying on this library function, we rewrote our code
+                    to use numba JIT compilation resulting in a 50x+ speedup. The runtime to generate a single refocuses imaged dropped
+                    from 8-10 minutes to roughly 10 seconds. This allowed us to generate significatnly more images and also to try
+                    different values of \(c\).
+                </p>
+                <p>
+                    The aperature adjustment part of the project did not involve shifting the images of the dataset, but instead
+                    averaging differnt samples of the dataset. The samples that we used were concentric circles around the center image.
+                    The more images that are samples the lower the aperture appears and the shallower the depth of field becomes. By
+                    simply varying the number of images, this effect can be achieved. Below there are results of both of these
+                    operations which showcase how playing around with light field datasets can have varying effects.
+                </p>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col-10">
+                <h4>Refocusing GIFs</h4>
+                <h5>Chess</h5>
+                <p>
+                    Here we vary the value of \(c\) from -6 to 1. There are 30 individual frames. In order to see the original
+                    frames, you can run the provided code which will generate all 30 of the frames used in this GIF.
+                </p>
+            </div>
+            <div class="col-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-2 my-auto"></div>
+            <div class="col-8 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess.gif?raw=true"
+                    class="mx-auto d-block img-fluid">
+            </div>
+            <div class="col-2 my-auto"></div>
+        </div>
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col-10">
+                <h5>Marble</h5>
+                <p>
+                    Here we vary the value of \(c\) from -4 to 4. There are 30 individual frames. In order to see the original
+                    frames, you can run the provided code which will generate all 30 of the frames used in this GIF.
+                </p>
+            </div>
+            <div class="col-1"></div>
+        </div>
+        <div class="row">
+            <div class="col-2 my-auto"></div>
+            <div class="col-8 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble.gif?raw=true"
+                    class="mx-auto d-block img-fluid">
+            </div>
+            <div class="col-2 my-auto"></div>
+        </div>
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="col-10">
+                <p></p>
+                <h4>Aperture Adjustment</h4>
+                <p>
+                    Again here we use the center images with increasing radii. We start by just using the center images and then
+                    work our way up to using all 289 images (i.e. first image uses only center image, next image uses center 9
+                    images, next uses center 25 images, etc.) The results can be seen below for the two examples of our
+                    choosing.
+                </p>
+            </div>
+            <div class="col-1"></div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Chess</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/0.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 1 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/3.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 49 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/6.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 169 Image(s) Averaged</div>
+            </div>
+            <div class="col-4 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/1.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 9 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/4.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 81 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/7.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 225 Image(s) Averaged</div>
+            </div>
+            <div class="col-4 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/2.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 25 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/5.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 121 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/chess_apt_out/8.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 289 Image(s) Averaged</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h5 class="d-flex justify-content-center">Marble</h5>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/0.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 1 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/3.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 49 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/6.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 169 Image(s) Averaged</div>
+            </div>
+            <div class="col-4 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/1.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 9 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/4.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 81 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/7.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 225 Image(s) Averaged</div>
+            </div>
+            <div class="col-4 my-auto">
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/2.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 25 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/5.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 121 Image(s) Averaged</div>
+                <img src="https://github.com/omatthew98/194-26-public-photos-final/blob/master/light_field/marble_apt_out/8.jpg?raw=true"
+                    class="mx-auto d-block img-fluid">
+                <div class="text-center font-italic">Center 289 Image(s) Averaged</div>
+            </div>
+        </div>
+    </div>
+    
+
+</body>
+
+</html>
