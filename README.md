@@ -13,6 +13,7 @@ Running the code is very simple:
 - type `python3 main.py` followed by the corresponding flags and arguments to run specific parts of the code.
 - type `python3 main.py -h` to see the following help message on how each command works:
 
+```
 usage: main.py [-h] [-num_epochs NUM_EPOCHS] [-alpha ALPHA] [-beta BETA]
                [-rand] [-run RUN RUN]
 
@@ -26,5 +27,5 @@ optional arguments:
   -run RUN RUN          computes style transfer between content image and and
                         style image. Expects relative file path to content and
                         style image respectively.
-
+```
 Enjoy! :)
